@@ -13,6 +13,7 @@ import '../features/portfolio/screens/portfolio_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/profile/screens/help_support_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
+import '../features/calculator/screens/calculator_screen.dart';
 import '../shared/widgets/bottom_nav_shell.dart';
 import 'theme.dart';
 
@@ -45,6 +46,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/calculator',
+        builder: (context, state) => const CalculatorScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

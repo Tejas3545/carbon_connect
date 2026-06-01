@@ -78,6 +78,89 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  void _enroll2FA() async {
+    final client = Supabase.instance.client;
+    try {
+      final res = await client.auth.mfa.enroll(factorType: FactorType.totp);
+      final secret = res.totp?.secret ?? ''; // Contains the secret to display to user
+
+      if (!mounted) return;
+      final codeController = TextEditingController();
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: const Text('Setup 2FA', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Enter this code in your Authenticator app:', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+                SelectableText(secret, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter 6-digit code',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                )
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  client.auth.mfa.unenroll(res.id); // Cancel enrollment if they back out
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final code = codeController.text.trim();
+                  if (code.length == 6) {
+                    try {
+                      final challenge = await client.auth.mfa.challenge(factorId: res.id);
+                      await client.auth.mfa.verify(
+                        factorId: res.id,
+                        challengeId: challenge.id,
+                        code: code,
+                      );
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('2FA Enabled Successfully!'), backgroundColor: Color(0xFF10B981)),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Verification Failed: $e')),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: const Text('Verify & Enable'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error enrolling MFA: $e')),
+      );
+    }
+  }
+
   void _showBankDetails() async {
     final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
     final details = await ref.read(profileServiceProvider).fetchBankDetails(userId);
@@ -194,6 +277,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.account_balance,
             title: 'Bank Details',
             onTap: _showBankDetails,
+          ),
+          _SettingsTile(
+            icon: Icons.security,
+            title: 'Enable 2FA (Authenticator)',
+            onTap: _enroll2FA,
           ),
           SwitchListTile(
             secondary: const Icon(Icons.fingerprint, color: Color(0xFF00D4AA)),

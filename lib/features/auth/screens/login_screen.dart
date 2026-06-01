@@ -33,18 +33,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     
-    final success = _isSignUp 
+    final result = _isSignUp 
         ? await ref.read(authProvider.notifier).signUp(email, password)
         : await ref.read(authProvider.notifier).signIn(email, password);
 
-    if (success && mounted) {
-      context.go('/');
-    } else if (mounted) {
+    if (!mounted) return;
+
+    if (result == 'success') {
+      if (mounted) context.go('/');
+    } else if (result == 'mfa_required') {
+      if (mounted) _showMfaDialog();
+    } else {
        final authState = ref.read(authProvider);
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Authentication Failed: ${authState.error ?? "Invalid credentials"}')),
-      );
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Authentication Failed: ${authState.error ?? "Invalid credentials"}')),
+         );
+       }
     }
+  }
+
+  void _showMfaDialog() {
+    final codeController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Two-Factor Authentication', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: codeController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Enter 6-digit TOTP code',
+              hintStyle: TextStyle(color: Colors.white54),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                ref.read(authProvider.notifier).logout(); // Cancel login
+              },
+              child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final code = codeController.text.trim();
+                if (code.length == 6) {
+                  final ok = await ref.read(authProvider.notifier).verifyMfa(code);
+                  if (!dialogContext.mounted) return;
+                  if (ok) {
+                    Navigator.pop(dialogContext);
+                    if (mounted) context.go('/');
+                  } else {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Invalid code')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Verify'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

@@ -10,19 +10,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
 
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  Future<bool> signUp(String email, String password) async {
+  Future<String> signUp(String email, String password) async {
     state = const AsyncValue.loading();
     try {
       final response = await _supabase.auth.signUp(email: email, password: password);
       state = const AsyncValue.data(null);
-      return response.user != null;
+      return response.user != null ? 'success' : 'failed';
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return false;
+      return 'failed';
     }
   }
 
-  Future<bool> signIn(String email, String password) async {
+  Future<String> signIn(String email, String password) async {
     state = const AsyncValue.loading();
     try {
       final response = await _supabase.auth.signInWithPassword(
@@ -30,8 +30,37 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
         password: password,
       );
       
+      final aal = _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal.nextLevel != aal.currentLevel) {
+        state = const AsyncValue.data(null);
+        return 'mfa_required';
+      }
+
       state = const AsyncValue.data(null);
-      return response.session != null;
+      return response.session != null ? 'success' : 'failed';
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return 'failed';
+    }
+  }
+
+  Future<bool> verifyMfa(String code) async {
+    state = const AsyncValue.loading();
+    try {
+      final factors = await _supabase.auth.mfa.listFactors();
+      if (factors.all.isEmpty) return false;
+      
+      final totpFactor = factors.all.firstWhere((f) => f.factorType == FactorType.totp);
+      final challenge = await _supabase.auth.mfa.challenge(factorId: totpFactor.id);
+      
+      await _supabase.auth.mfa.verify(
+        factorId: totpFactor.id,
+        challengeId: challenge.id,
+        code: code,
+      );
+      
+      state = const AsyncValue.data(null);
+      return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       return false;

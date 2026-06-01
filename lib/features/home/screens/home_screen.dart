@@ -111,6 +111,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                
+                // --- CARBON FOOTPRINT CALCULATOR ---
+                GestureDetector(
+                  onTap: () {
+                    context.push('/calculator');
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10B981), Color(0xFF0369A1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calculate_outlined, color: Colors.white, size: 28),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Calculate Your Footprint',
+                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Find out your CO₂ emissions and offset them instantly.',
+                          style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.9), fontSize: 14),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // --- ACTIVE ORDERS SECTION ---

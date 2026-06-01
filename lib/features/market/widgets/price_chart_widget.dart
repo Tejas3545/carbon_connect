@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:candlesticks/candlesticks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/market_provider.dart';
 
@@ -19,59 +19,58 @@ class PriceChartWidget extends ConsumerWidget {
           );
         }
 
-        // Convert trades to spots. X-axis: time (relative), Y-axis: price
-        // For simplicity, we use index as X
-        final spots = trades.asMap().entries.map((e) {
-          return FlSpot(e.key.toDouble(), e.value.price);
-        }).toList().reversed.toList(); // Reverse to show chronological order if sorted desc
+        // Group trades by an arbitrary time slice (e.g., a day or hour). 
+        // For visual sake on limited data, let's group by 1-hour intervals.
+        final map = <int, List<double>>{};
+        final volumes = <int, double>{};
+        
+        for (var t in trades) {
+          // Flatten to hour precision
+          final dt = DateTime(t.executedAt.year, t.executedAt.month, t.executedAt.day, t.executedAt.hour);
+          final ms = dt.millisecondsSinceEpoch;
+          
+          if (!map.containsKey(ms)) {
+            map[ms] = [];
+            volumes[ms] = 0;
+          }
+          map[ms]!.add(t.price);
+          volumes[ms] = volumes[ms]! + t.quantity;
+        }
 
-        final minPrice = trades.map((t) => t.price).reduce((a, b) => a < b ? a : b);
-        final maxPrice = trades.map((t) => t.price).reduce((a, b) => a > b ? a : b);
-        final padding = (maxPrice - minPrice) * 0.2;
+        final candles = <Candle>[];
+        final sortedKeys = map.keys.toList()..sort();
+        for (var ms in sortedKeys) {
+          final prices = map[ms]!;
+          if (prices.isEmpty) continue;
+          
+          final date = DateTime.fromMillisecondsSinceEpoch(ms);
+          final open = prices.first; // Note: trades might need sorting inside the group for accurate open/close
+          final close = prices.last;
+          final high = prices.reduce((a, b) => a > b ? a : b);
+          final low = prices.reduce((a, b) => a < b ? a : b);
+          final volume = volumes[ms] ?? 0.0;
+          
+          candles.add(Candle(
+            date: date,
+            high: high,
+            low: low,
+            open: open,
+            close: close,
+            volume: volume,
+          ));
+        }
+
+        // Candlesticks package requires the list to be reversed for showing the latest on the right
+        final reversedCandles = candles.reversed.toList();
 
         return SizedBox(
           height: 250,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: 10,
-                getDrawingHorizontalLine: (value) {
-                  return FlLine(
-                    color: const Color(0xFF0A1628).withValues(alpha: 0.5),
-                    strokeWidth: 1,
-                  );
-                },
-              ),
-              titlesData: const FlTitlesData(
-                show: true,
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide time for now
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 42,
-                  ),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              minY: minPrice - padding,
-              maxY: maxPrice + padding,
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  color: const Color(0xFF00D4AA),
-                  barWidth: 3,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: const Color(0xFF00D4AA).withValues(alpha: 0.1),
-                  ),
-                ),
-              ],
+          child: Theme(
+            data: ThemeData.dark().copyWith(
+              cardColor: const Color(0xFF0F172A),
+            ),
+            child: Candlesticks(
+              candles: reversedCandles,
             ),
           ),
         );
