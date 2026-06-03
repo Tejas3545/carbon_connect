@@ -11,6 +11,7 @@ import '../../portfolio/providers/portfolio_provider.dart';
 import '../../market/widgets/price_chart_widget.dart';
 import '../../market/providers/market_provider.dart';
 import '../../../core/models/order_model.dart';
+import '../../../core/models/trade_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -516,7 +517,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildTradeList(List trades, String userId) {
+  Widget _buildTradeList(List<TradeModel> trades, String userId) {
     if (trades.isEmpty) {
       return Container(
         width: double.infinity,

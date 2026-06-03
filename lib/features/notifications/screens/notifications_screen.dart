@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/services/notification_service.dart';
 
 class NotificationsScreen extends ConsumerWidget {
@@ -40,7 +41,7 @@ class NotificationsScreen extends ConsumerWidget {
                           Text(notification.body),
                           const SizedBox(height: 4),
                           Text(
-                            '${notification.createdAt.hour}:${notification.createdAt.minute}', 
+                            DateFormat('HH:mm').format(notification.createdAt),
                             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)
                           ),
                         ],

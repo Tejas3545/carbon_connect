@@ -65,7 +65,8 @@ class MarketService {
       final response = await _supabase
           .from('trades')
           .select('price')
-          .gte('executed_at', startOfDay.toIso8601String());
+          .gte('executed_at', startOfDay.toIso8601String())
+          .order('executed_at', ascending: true);
 
       if (response.isEmpty) {
         return {'change': 0.0, 'high': 0.0, 'low': 0.0};

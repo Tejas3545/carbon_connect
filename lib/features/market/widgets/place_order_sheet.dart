@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/order_book_provider.dart';
+import '../providers/market_provider.dart';
 
 class PlaceOrderSheet extends ConsumerStatefulWidget {
   final String orderType; // 'BUY' or 'SELL'
@@ -37,7 +37,7 @@ class _PlaceOrderSheetState extends ConsumerState<PlaceOrderSheet> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(orderService).placeOrder(
+      await ref.read(orderServiceProvider).placeOrder(
             type: widget.orderType,
             price: price,
             quantity: quantity,
